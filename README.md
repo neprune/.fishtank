@@ -80,6 +80,8 @@ The `tank` plugin ships single-letter shortcuts for the commands you'll reach fo
 
 | alias  | command         |
 |--------|-----------------|
+| `t`    | `tank`          |
+| `th`   | `tank help`     |
 | `ts`   | `tank status`   |
 | `te`   | `tank edit`     |
 | `tw`   | `tank where`    |
