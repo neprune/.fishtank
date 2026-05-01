@@ -1,4 +1,4 @@
-function gwipp --wraps=git\ commit\ -m\ \'wip\'\ \&\&\ git\ push --description alias\ gwipp=git\ commit\ -m\ \'wip\'\ \&\&\ git\ push
-  git commit -m 'wip' && git push $argv
-        
+function gwipp --description 'commit -m wip then push'
+    git commit -m wip
+    and git push $argv
 end

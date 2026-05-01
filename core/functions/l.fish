@@ -1,3 +1,3 @@
-function l --wraps='ls -l' --description 'alias l=ls -l'
-  ls -lah $argv
+function l --wraps='ls -lah' --description 'alias l=ls -lah'
+    ls -lah $argv
 end
