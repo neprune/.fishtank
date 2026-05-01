@@ -159,7 +159,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         echo "  uncapture <fn>                    Move <fn> back out of its plugin into ~/.config/fish/functions/."
         echo "  use <plugin|all>                  Use the given local plugin (or all)."
         echo "  nouse <plugin>                    Stop using the given local plugin."
-        echo "  edit <fn>                         Open a captured function in \$EDITOR."
+        echo "  edit <fn>                         Open <fn> in \$EDITOR (captured, local, or new)."
         echo "  where <fn>                        Print which plugin owns <fn>."
         echo "  list [plugin]                     List functions in in-use plugins."
         echo "  refresh                           Pull repo, update in-use plugins, install tracked externals."
@@ -660,6 +660,8 @@ function tank --description 'Manage personal git-backed fisher plugins.'
     end
 
     # Edit -------------------------------------------------------------------
+    # Three modes: captured (in tank) / local (in ~/.config/fish/functions/) /
+    # new (doesn't exist yet — write a stub and open it).
     if set -q _flag_edit
         if test (count $argv) -ne 1
             echo "Error: edit requires 1 argument: <function_name>"
@@ -667,17 +669,27 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         end
         set -l fn $argv[1]
         set -l owner (__tank_find_function $fn)
-        if test -z "$owner"
-            echo "Error: function '$fn' not found in any local plugin"
-            return 1
-        end
-        set -l file "$fish_tank_dir/$owner/functions/$fn.fish"
+        set -l local_file "$__fish_config_dir/functions/$fn.fish"
 
-        set -l shadow "$__fish_config_dir/functions/$fn.fish"
-        if test -e $shadow
-            echo "Warning: a shadowing copy exists at $shadow."
-            echo "         Edits to the captured copy will be hidden by it."
-            echo "         Promote the shadow back into the tank with: tank capture --force $fn $owner"
+        set -l file
+        set -l mode
+        if test -n "$owner"
+            set file "$fish_tank_dir/$owner/functions/$fn.fish"
+            set mode captured
+            if test -e $local_file
+                echo "Warning: a shadowing copy exists at $local_file."
+                echo "         Edits to the captured copy will be hidden by it."
+                echo "         Promote the shadow back into the tank with: tank capture --force $fn $owner"
+            end
+        else if test -f $local_file
+            set file $local_file
+            set mode local
+        else
+            set file $local_file
+            set mode new
+            mkdir -p (dirname $file)
+            printf 'function %s\n    \nend\n' $fn >$file
+            echo "Created stub: $file"
         end
 
         set -l editor $EDITOR
@@ -688,12 +700,32 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         $editor $file
         set -l ed_status $status
 
-        # Drop fish's cached parse, sync fisher's copy, then re-source so the
-        # current shell has the new definition immediately.
+        # Drop fish's cached parse and reload from disk so the current shell
+        # picks up the edit. For captured functions, also fisher-update so the
+        # path-2 fisher copy stays in sync for new shells.
         functions --erase $fn 2>/dev/null
-        fisher update "$fish_tank_dir/$owner" >/dev/null 2>&1
+        if test "$mode" = captured
+            fisher update "$fish_tank_dir/$owner" >/dev/null 2>&1
+        end
         if test -f $file
             source $file
+        end
+
+        # New functions: nudge to capture into the tank.
+        if test "$mode" = new; and test -f $file
+            set -l plugins
+            for plugin_dir in $fish_tank_dir/*/
+                set -l plugin_path (string trim --right --chars=/ $plugin_dir)
+                set -l plugin_name (basename $plugin_path)
+                test "$plugin_name" = .git; and continue
+                test -d "$plugin_path/functions"; or continue
+                set -a plugins $plugin_name
+            end
+            echo ""
+            echo "Tip: capture into the tank with: tank capture $fn <plugin>"
+            if test (count $plugins) -gt 0
+                echo "     Available plugins: "(string join " " $plugins)
+            end
         end
 
         return $ed_status

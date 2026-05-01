@@ -13,7 +13,7 @@ This repo is a small set of [fisher](https://github.com/jorgebucaran/fisher) plu
 
 1. Install [fish shell](https://fishshell.com/).
 2. Clone this repository (e.g., `~/.fishtank`).
-3. Set the `fish_tank_dir` universal variable and run `tank --init`:
+3. Set the `fish_tank_dir` universal variable and run `tank init`:
 
    ```fish
    cd /path/to/this/repo
@@ -63,18 +63,31 @@ tank --<command> [args...]   (flag form, equivalent)
 - `--local` — for `refresh`, skip git ops (just rerun local fisher updates).
 - `-f` / `--force` — for `capture`, overwrite an existing captured copy (the re-capture path).
 
-## `funcsave` reminder
+## Editing functions: just use `tank edit`
 
-The `tank` plugin ships a `funcsave` wrapper (`tank/functions/funcsave.fish`) that mirrors fish's bundled funcsave but prints a one-line reminder of how to capture the saved function into a tank plugin. Because `alias --save NAME …` calls `funcsave` internally, the same nudge fires there too. Suppress with `funcsave -q`, a custom `-d <dir>`, or `set -U tank_funcsave_quiet 1`.
+`tank edit <fn>` (alias: `te`) is the one-stop way to open a function in `$EDITOR`. It dispatches on where the function lives:
 
-## A note on `funced` / `funcsave`
+- captured in tank → opens the tank source file, then `functions --erase` + `fisher update` + `source` so the current shell picks up the edit immediately.
+- local file at `~/.config/fish/functions/<fn>.fish` → opens it in place, then `--erase` + `source`.
+- doesn't exist → writes a stub (`function <fn>\n    \nend`) to the local dir, opens it, sources on save, and prints a `tank capture <fn> <plugin>` nudge.
 
-`funcsave` writes to `~/.config/fish/functions/<fn>.fish`, which sits ahead of the fisher path on `$fish_function_path`. So if you `funced` a captured function and `funcsave` it, you'll create a *shadow* file that hides the captured copy — your edit appears to work, but the tank source is unchanged and won't sync to other machines.
+Avoid `funced` + `funcsave` for captured functions: `funcsave` writes to `~/.config/fish/functions/`, which sits ahead of the fisher path on `$fish_function_path`, so you'll create a *shadow* that hides the captured copy. If you do shadow one by accident, `tank capture --force <fn> <plugin>` (alias: `tc --force …`) promotes the shadow back into the tank.
 
-Two ways to keep edits inside the tank:
+## Short aliases
 
-- **`tank edit <fn>`** — opens the captured source file directly. After the editor exits, tank drops fish's cached function parse, re-runs `fisher update` for the owning plugin, and re-sources the file so the current shell sees the new version immediately.
-- **`tank capture --force <fn> <plugin>`** — promotes a `~/.config/fish/functions/<fn>.fish` shadow back into the tank, overwriting the captured copy. Use this if you've already edited via `funced`.
+The `tank` plugin ships single-letter shortcuts for the commands you'll reach for daily:
+
+| alias  | command         |
+|--------|-----------------|
+| `ts`   | `tank status`   |
+| `te`   | `tank edit`     |
+| `tw`   | `tank where`    |
+| `tc`   | `tank capture`  |
+| `tl`   | `tank list`     |
+| `td`   | `tank doctor`   |
+| `tn`   | `tank new`      |
+
+(`t` + the first letter of each command. `tr` is left alone so as not to shadow GNU `tr`; type `tank refresh` in full.)
 
 ## Example: capture round-trip
 

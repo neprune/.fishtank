@@ -100,7 +100,7 @@ complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a ref
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a track      -d "Track an external plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a drop       -d "Stop tracking an external plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a status     -d "Show overview"
-complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a edit       -d "Open a captured function in \$EDITOR"
+complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a edit       -d "Open a function in \$EDITOR (captured, local, or new)"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a where      -d "Print which plugin owns a function"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a new        -d "Create a new empty plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a doctor     -d "Diagnose tank's setup"
@@ -118,7 +118,7 @@ complete -c tank      -l local     -d "Refresh: skip git ops"
 complete -c tank -s t -l track     -d "Track an external plugin"
 complete -c tank -s d -l drop      -d "Stop tracking an external plugin"
 complete -c tank -s s -l status    -d "Show overview"
-complete -c tank      -l edit      -d "Open a captured function in \$EDITOR"
+complete -c tank      -l edit      -d "Open a function in \$EDITOR (captured, local, or new)"
 complete -c tank      -l where     -d "Print which plugin owns a function"
 complete -c tank      -l new       -d "Create a new empty plugin"
 complete -c tank      -l doctor    -d "Diagnose tank's setup"
@@ -137,8 +137,9 @@ complete -c tank -n "__tank_in_mode capture c" -a "(__tank_local_plugins)"      
 # uncapture <function>
 complete -c tank -n "__tank_in_mode uncapture" -a "(__tank_captured_functions)" -d "Function to uncapture"
 
-# edit <function>
-complete -c tank -n "__tank_in_mode edit" -a "(__tank_captured_functions)" -d "Function to edit"
+# edit <function>  (captured, local-only, or a new name)
+complete -c tank -n "__tank_in_mode edit" -a "(__tank_captured_functions)"   -d "Captured function"
+complete -c tank -n "__tank_in_mode edit" -a "(__tank_uncaptured_functions)" -d "Local function"
 
 # where <function>
 complete -c tank -n "__tank_in_mode where" -a "(__tank_captured_functions)" -d "Function to locate"
