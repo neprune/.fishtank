@@ -82,7 +82,7 @@ function __tank_in_mode
 end
 
 set -l __tank_subcommands init capture uncapture use nouse list refresh \
-    track drop status edit where new doctor help
+    track drop status edit where new doctor delete help
 
 # Completions ----------------------------------------------------------------
 
@@ -93,6 +93,7 @@ complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands; and no
     -a init       -d "Initialize (symlink fisher_path, install fisher and tank)"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a capture    -d "Move function into tank under given plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a uncapture  -d "Move function back out of tank"
+complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a delete     -d "Delete a function wherever it lives"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a use        -d "Use a local plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a nouse      -d "Stop using a local plugin"
 complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a list       -d "List functions in in-use plugins"
@@ -110,6 +111,7 @@ complete -c tank -n "not __fish_seen_subcommand_from $__tank_subcommands" -a hel
 complete -c tank -s i -l init      -d "Initialize"
 complete -c tank -s c -l capture   -d "Move function into tank under given plugin"
 complete -c tank      -l uncapture -d "Move function back out of tank"
+complete -c tank      -l delete    -d "Delete a function wherever it lives"
 complete -c tank -s u -l use       -d "Use a local plugin (or all)"
 complete -c tank -s n -l nouse     -d "Stop using a local plugin"
 complete -c tank -s l -l list      -d "List functions"
@@ -136,6 +138,10 @@ complete -c tank -n "__tank_in_mode capture c" -a "(__tank_local_plugins)"      
 
 # uncapture <function>
 complete -c tank -n "__tank_in_mode uncapture" -a "(__tank_captured_functions)" -d "Function to uncapture"
+
+# delete <function>  (any captured or local function)
+complete -c tank -n "__tank_in_mode delete" -a "(__tank_captured_functions)"   -d "Captured function"
+complete -c tank -n "__tank_in_mode delete" -a "(__tank_uncaptured_functions)" -d "Local function"
 
 # edit <function>  (captured, local-only, or a new name)
 complete -c tank -n "__tank_in_mode edit" -a "(__tank_captured_functions)"   -d "Captured function"

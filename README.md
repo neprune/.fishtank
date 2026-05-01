@@ -43,6 +43,7 @@ tank --<command> [args...]   (flag form, equivalent)
 - `tank new <plugin>` — scaffold an empty plugin (`<plugin>/functions/`).
 - `tank capture <fn> <plugin>` — move `~/.config/fish/functions/<fn>.fish` into `<plugin>/functions/`, fisher-update, commit, push.
 - `tank uncapture <fn>` — reverse: move `<fn>` back out of its plugin into `~/.config/fish/functions/`.
+- `tank delete <fn>` — delete `<fn>` wherever it lives. Captured: removes from the plugin and commits + pushes. Local: just removes the file. Both: removes both. Captured deletions are git-recoverable; local-only ones are not.
 - `tank use <plugin|all>` / `tank nouse <plugin>` — install / remove via fisher.
 - `tank edit <fn>` — open a captured function in `$EDITOR`.
 - `tank where <fn>` — print which plugin owns the function.
@@ -86,6 +87,7 @@ The `tank` plugin ships single-letter shortcuts for the commands you'll reach fo
 | `tl`   | `tank list`     |
 | `td`   | `tank doctor`   |
 | `tn`   | `tank new`      |
+| `tdel` | `tank delete`   |
 
 (`t` + the first letter of each command. `tr` is left alone so as not to shadow GNU `tr`; type `tank refresh` in full.)
 

@@ -29,7 +29,8 @@ function __tank_git_commit
     if test (count $paths) -eq 0
         return 1
     end
-    git -C $fish_tank_dir add -- $paths
+    # -A so we pick up deletions as well as additions/modifications.
+    git -C $fish_tank_dir add -A -- $paths
     or return 1
     if git -C $fish_tank_dir diff --cached --quiet
         return 0
@@ -115,7 +116,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
 
     # Subcommand-style invocation: rewrite `tank capture x y` -> `tank --capture x y`.
     set -l subcommands init capture uncapture use nouse list refresh \
-        track drop status edit where new doctor help
+        track drop status edit where new doctor delete help
     if test (count $argv) -ge 1; and contains -- $argv[1] $subcommands
         set argv "--$argv[1]" $argv[2..]
     end
@@ -136,6 +137,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         'where' \
         'new' \
         'doctor' \
+        'delete' \
         'no-commit' \
         'no-push' \
         'dry-run' \
@@ -157,6 +159,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         echo "  new <plugin>                      Create a new empty plugin."
         echo "  capture <fn> <plugin>             Move <fn> into <plugin>, fisher-update, commit, push."
         echo "  uncapture <fn>                    Move <fn> back out of its plugin into ~/.config/fish/functions/."
+        echo "  delete <fn>                       Delete <fn> wherever it lives (commits if captured)."
         echo "  use <plugin|all>                  Use the given local plugin (or all)."
         echo "  nouse <plugin>                    Stop using the given local plugin."
         echo "  edit <fn>                         Open <fn> in \$EDITOR (captured, local, or new)."
@@ -382,6 +385,84 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         end
 
         echo "Uncaptured $function_name from $owner -> $dest_file"
+        return 0
+    end
+
+    # Delete -----------------------------------------------------------------
+    # Removes <fn> wherever it lives: captured copy (with commit + push) and/or
+    # the user-config shadow. Captured deletions are git-recoverable; local-only
+    # deletions are not.
+    if set -q _flag_delete
+        if test (count $argv) -ne 1
+            echo "Error: delete requires 1 argument: <function_name>"
+            return 1
+        end
+        set -l fn $argv[1]
+        set -l owner (__tank_find_function $fn)
+        set -l local_file "$__fish_config_dir/functions/$fn.fish"
+        set -l has_local 0
+        test -f $local_file; and set has_local 1
+
+        if test -z "$owner"; and test $has_local -eq 0
+            echo "Error: function '$fn' not found anywhere"
+            return 1
+        end
+
+        set -l rel_path
+        set -l target_file
+        if test -n "$owner"
+            set rel_path "$owner/functions/$fn.fish"
+            set target_file "$fish_tank_dir/$rel_path"
+        end
+
+        if set -q _flag_dry_run
+            echo "Would delete:"
+            test -n "$owner";    and echo "  $target_file (captured in $owner)"
+            test $has_local -eq 1; and echo "  $local_file (local)"
+            return 0
+        end
+
+        # Local-only side first (no git interaction needed).
+        if test $has_local -eq 1
+            command rm -f $local_file
+            echo "Removed $local_file"
+        end
+
+        # Captured side: stash/pull, rm, fisher-update, commit, push.
+        if test -n "$owner"
+            set -l stashed 1
+            if not set -q _flag_no_commit
+                echo "Stashing and pulling before making any changes..."
+                __tank_git_stash_pull
+                set stashed $status
+                if test $stashed -eq 2
+                    echo "Error: stash failed; aborting"
+                    return 1
+                end
+            end
+
+            command rm -f $target_file
+            echo "Removed $target_file"
+
+            echo "Reloading $owner plugin"
+            fisher update "$fish_tank_dir/$owner"
+
+            if not set -q _flag_no_commit
+                echo "Committing..."
+                if set -q _flag_no_push
+                    __tank_git_commit "Delete $fn from $owner." $rel_path
+                else
+                    __tank_git_commit_push "Delete $fn from $owner." $rel_path
+                end
+                if test $stashed -eq 0
+                    echo "Popping the stash..."
+                    __tank_git_stash_pop
+                end
+            end
+        end
+
+        functions --erase $fn 2>/dev/null
+        echo "Deleted $fn"
         return 0
     end
 
