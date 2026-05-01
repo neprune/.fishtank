@@ -125,6 +125,7 @@ complete -c tank      -l doctor    -d "Diagnose tank's setup"
 complete -c tank      -l no-commit -d "Skip stash/pull/commit/push"
 complete -c tank      -l no-push   -d "Commit but don't push"
 complete -c tank      -l dry-run   -d "Show what would happen"
+complete -c tank -s f -l force     -d "Capture: overwrite an existing captured copy"
 complete -c tank -s h -l help      -d "Show help"
 
 # Argument completions per mode

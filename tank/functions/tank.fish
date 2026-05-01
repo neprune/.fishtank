@@ -139,6 +139,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         'no-commit' \
         'no-push' \
         'dry-run' \
+        'f/force' \
         'h/help' \
         -- $argv
     or return
@@ -172,6 +173,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         echo "  --no-push                         Commit but don't push."
         echo "  --dry-run                         Print what would happen without doing it."
         echo "  --local                           For refresh: skip git ops, just rerun local fisher updates."
+        echo "  -f, --force                       For capture: overwrite an existing captured copy."
         echo "  -h, --help                        Show this help."
         return 0
     end
@@ -243,13 +245,22 @@ function tank --description 'Manage personal git-backed fisher plugins.'
             echo "Error: function file '$function_file' not found"
             return 1
         end
+
+        set -l recapture 0
         if test -e $target_file
-            echo "Error: $target_file already exists"
-            return 1
+            if not set -q _flag_force
+                echo "Error: $target_file already exists (use --force to overwrite)"
+                return 1
+            end
+            set recapture 1
         end
 
         if set -q _flag_dry_run
-            echo "Would move:"
+            if test $recapture -eq 1
+                echo "Would overwrite (re-capture):"
+            else
+                echo "Would move:"
+            end
             echo "  $function_file"
             echo "  -> $target_file"
             return 0
@@ -267,7 +278,7 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         end
 
         mkdir -p (dirname $target_file)
-        if not mv "$function_file" "$target_file"
+        if not mv -f "$function_file" "$target_file"
             echo "Error: failed to move function file"
             if test $stashed -eq 0
                 __tank_git_stash_pop
@@ -278,12 +289,17 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         echo "Reloading $plugin_name plugin"
         fisher update "$plugin_dir"
 
+        set -l verb Capture
+        if test $recapture -eq 1
+            set verb Re-capture
+        end
+
         if not set -q _flag_no_commit
             echo "Committing..."
             if set -q _flag_no_push
-                __tank_git_commit "Capture $function_name under $plugin_name." $rel_path
+                __tank_git_commit "$verb $function_name under $plugin_name." $rel_path
             else
-                __tank_git_commit_push "Capture $function_name under $plugin_name." $rel_path
+                __tank_git_commit_push "$verb $function_name under $plugin_name." $rel_path
             end
             if test $stashed -eq 0
                 echo "Popping the stash..."
@@ -291,7 +307,11 @@ function tank --description 'Manage personal git-backed fisher plugins.'
             end
         end
 
-        echo "Captured $function_name under $plugin_name"
+        if test $recapture -eq 1
+            echo "Re-captured $function_name under $plugin_name"
+        else
+            echo "Captured $function_name under $plugin_name"
+        end
         return 0
     end
 
@@ -653,13 +673,30 @@ function tank --description 'Manage personal git-backed fisher plugins.'
         end
         set -l file "$fish_tank_dir/$owner/functions/$fn.fish"
 
+        set -l shadow "$__fish_config_dir/functions/$fn.fish"
+        if test -e $shadow
+            echo "Warning: a shadowing copy exists at $shadow."
+            echo "         Edits to the captured copy will be hidden by it."
+            echo "         Promote the shadow back into the tank with: tank capture --force $fn $owner"
+        end
+
         set -l editor $EDITOR
         if test -z "$editor"; and type -q nvim; set editor nvim; end
         if test -z "$editor"; and type -q vim;  set editor vim;  end
         if test -z "$editor"; set editor vi; end
 
         $editor $file
-        return $status
+        set -l ed_status $status
+
+        # Drop fish's cached parse, sync fisher's copy, then re-source so the
+        # current shell has the new definition immediately.
+        functions --erase $fn 2>/dev/null
+        fisher update "$fish_tank_dir/$owner" >/dev/null 2>&1
+        if test -f $file
+            source $file
+        end
+
+        return $ed_status
     end
 
     # Where ------------------------------------------------------------------

@@ -61,6 +61,20 @@ tank --<command> [args...]   (flag form, equivalent)
 - `--no-push` — commit but don't push.
 - `--dry-run` — show what would happen, don't do it.
 - `--local` — for `refresh`, skip git ops (just rerun local fisher updates).
+- `-f` / `--force` — for `capture`, overwrite an existing captured copy (the re-capture path).
+
+## `funcsave` reminder
+
+The `tank` plugin ships a `funcsave` wrapper (`tank/functions/funcsave.fish`) that mirrors fish's bundled funcsave but prints a one-line reminder of how to capture the saved function into a tank plugin. Because `alias --save NAME …` calls `funcsave` internally, the same nudge fires there too. Suppress with `funcsave -q`, a custom `-d <dir>`, or `set -U tank_funcsave_quiet 1`.
+
+## A note on `funced` / `funcsave`
+
+`funcsave` writes to `~/.config/fish/functions/<fn>.fish`, which sits ahead of the fisher path on `$fish_function_path`. So if you `funced` a captured function and `funcsave` it, you'll create a *shadow* file that hides the captured copy — your edit appears to work, but the tank source is unchanged and won't sync to other machines.
+
+Two ways to keep edits inside the tank:
+
+- **`tank edit <fn>`** — opens the captured source file directly. After the editor exits, tank drops fish's cached function parse, re-runs `fisher update` for the owning plugin, and re-sources the file so the current shell sees the new version immediately.
+- **`tank capture --force <fn> <plugin>`** — promotes a `~/.config/fish/functions/<fn>.fish` shadow back into the tank, overwriting the captured copy. Use this if you've already edited via `funced`.
 
 ## Example: capture round-trip
 
