@@ -1,5 +1,5 @@
 # Have fisher put things under a '/fisher' directory rather than mix plugin functions, conf.d and completions with system ones.
-set fisher_path $__fish_config_dir/fisher
+set --query fisher_path || set --global fisher_path $__fish_config_dir/fisher
 
 mkdir -p $fisher_path
 
